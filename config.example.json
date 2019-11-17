@@ -1,3 +1,11 @@
 {
-    "dc_client_token": ""
+    "api_config": {
+        "dc_client_token": ""
+    },
+    "database_config": {
+        "user": "",
+        "password": "",
+        "host": "",
+        "database": ""
+    }
 }

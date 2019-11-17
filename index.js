@@ -33,10 +33,11 @@ dc_client.on('message', dc_msg => {
     // Message Handles
 
     if (dc_msg.attachments.first()) {
-
+        db_pool.getConnection().then(conn => {
+        dc_msg.react('645681399512432660');
         var dl_obj = { dc_msg: dc_msg, db_pool: db_pool };
         module_index.fileload_loader.download(dl_obj)
-
+        });
     };
 
 });

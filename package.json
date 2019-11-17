@@ -1,0 +1,19 @@
+{
+  "name": "av",
+  "version": "1.0.0",
+  "description": "Discord Antivirus Bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WitchOfFrost/discordav.git"
+  },
+  "author": "Christen Tautz <unlimited.gamer@gmx.de>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WitchOfFrost/discordav/issues"
+  },
+  "homepage": "https://github.com/WitchOfFrost/discordav#readme"
+}

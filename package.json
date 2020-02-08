@@ -18,11 +18,11 @@
     "homepage": "https://github.com/WitchOfFrost/discordav#readme",
     "dependencies": {
         "clamscan": "^1.1.0",
+        "crypto": "^1.0.1",
         "discord.js": "^11.5.1",
         "fs": "0.0.1-security",
         "mariadb": "^2.1.3",
         "request": "^2.88.0",
-        "sha256-file": "^1.0.0",
         "shelljs": "^0.8.3"
     }
 }

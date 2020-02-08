@@ -1,7 +1,7 @@
 const request = require(`request`);
 const fs = require(`fs`);
 const local_scan = require('clamscan');
-const sha256 = require('sha256-file');
+const crypto = require('crypto');
 const clamavscan = new local_scan().init({
     remove_infected: false,
     quarantine_infected: false,
@@ -14,43 +14,51 @@ const clamavscan = new local_scan().init({
 });
 
 module.exports.download = async function (dl_obj) {
-    dl_obj.db_pool.getConnection().then(conn => {
+    dl_obj.db_pool.getConnection().then(async conn => {
         //var ignored_files = [`png`, `txt`, `gif`, `jpg`, `jpeg`, `tif`, `tiff`, `mp3`, `wav`, `avi`, `mpg`, `mpeg`, `webm`, `wmv`, `flv`, `mov`, `mp4`];
         var ignored_files = []
 
 
-        dl_obj.dc_msg.attachments.forEach(attached => {
+        await dl_obj.dc_msg.attachments.forEach(async attached => {
             var filename_check = attached.filename.split(".");
-
             if (ignored_files.includes(filename_check.slice(-1)[0])) {
                 console.log(`Detected ${filename_check.slice(-1)[0]} file extension, marked safe -> Returning`);
                 return;
             } else {
                 dl_obj.url = attached.url
-                file_download(dl_obj)
+                await file_download(dl_obj)
             };
 
             async function file_download(dl_obj) {
-                request.get(dl_obj.url)
+                await request.get(dl_obj.url)
                     .on('error', console.error)
-                    .pipe(fs.createWriteStream(`./files/${attached.filename}`))
-                await conn.query(`INSERT IGNORE INTO filehash (sha256sum, filename) VALUES ("${sha256(`./files/${attached.filename}`)}", "${attached.filename}")`).then(res => console.log(res))
+                    .pipe(await fs.createWriteStream(`./files/${attached.filename}`))
+
+                function fileHash(filename, algorithm = 'sha256') {
+                    return new Promise((resolve, reject) => {
+                        let shasum = crypto.createHash(algorithm);
+                        try {
+                            let s = fs.createReadStream(filename)
+                            s.on('data', function (data) {
+                                shasum.update(data)
+                            })
+                            s.on('end', function () {
+                                const hash = shasum.digest('hex')
+                                return resolve(hash);
+                            })
+                        } catch (error) {
+                            return reject('calc fail');
+                        }
+                    });
+                }
+                dl_obj.filesum = await fileHash(`./files/${attached.filename}`)
+                await conn.query(`INSERT IGNORE INTO filehash (sha256sum, filename) VALUES ("${dl_obj.filesum}", "${attached.filename}")`).then(res => console.log(res))
                 await file_scan(dl_obj)
                 conn.end()
             };
 
-
-
-
-
-
-
-
-
-
             async function file_scan(dl_obj) {
-
-                conn.query(`SELECT * FROM filehash WHERE sha256sum="${sha256(`./files/${attached.filename}`)}"`).then(response_hash => {
+                conn.query(`SELECT * FROM filehash WHERE sha256sum="${dl_obj.filesum}"`).then(response_hash => {
                     if (response_hash[0].filehash.clam_detection == undefined) {
                         clamavscan.then(async clamscan => {
 
@@ -58,22 +66,26 @@ module.exports.download = async function (dl_obj) {
                             var { is_infected, file, viruses } = await clamscan.is_infected(`./files/${attached.filename}`);
                             if (is_infected) {
                                 console.log(`${file} is infected with ${viruses}!`);
-                                conn.query(`UPDATE filehash SET clam_detection = 1 WHERE sha256sum = "${sha256(`./files/${attached.filename}`)}"`)
+                                conn.query(`UPDATE filehash SET clam_detection = 1 WHERE sha256sum = "${dl_obj.filesum}"`)
                                 dl_obj.dc_msg.delete();
+                                fs.unlinkSync(`./files/${attached.filename}`)
                             } else {
                                 console.log(`File ${file} is clean.`);
-                                conn.query(`UPDATE filehash SET clam_detection = 0 WHERE sha256sum = "${sha256(`./files/${attached.filename}`)}"`)
+                                conn.query(`UPDATE filehash SET clam_detection = 0 WHERE sha256sum = "${dl_obj.filesum}"`)
                                 dl_obj.dc_msg.clearReactions();
+                                fs.unlinkSync(`./files/${attached.filename}`)
                             }
                         }).catch(err => { console.log(err) });
 
                     } else {
                         if (response_hash[0].filehash.clam_detection == 1) {
-                            console.log(`File with Hash ${sha256(`./files/${attached.filename}`)} already scanned, Infected`)
+                            console.log(`File with Hash ${dl_obj.filesum} already scanned, Infected`)
                             dl_obj.dc_msg.delete();
+                            fs.unlinkSync(`./files/${attached.filename}`)
                         } else {
-                            console.log(`File with Hash ${sha256(`./files/${attached.filename}`)} already scanned, Clean`)
+                            console.log(`File with Hash ${dl_obj.filesum} already scanned, Clean`)
                             dl_obj.dc_msg.clearReactions();
+                            fs.unlinkSync(`./files/${attached.filename}`)
                         }
 
                     };

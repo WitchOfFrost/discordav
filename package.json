@@ -22,6 +22,7 @@
         "fs": "0.0.1-security",
         "mariadb": "^2.1.3",
         "request": "^2.88.0",
+        "sha256-file": "^1.0.0",
         "shelljs": "^0.8.3"
     }
 }

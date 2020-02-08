@@ -21,11 +21,17 @@ const db_pool = mariadb.createPool({
 
 dc_client.on('ready', ready_state => {
     console.log(`Logged in as ${dc_client.user.tag}!\n`);
+
+    db_pool.getConnection().then(conn => {
+        console.log("Checking if Table exists...")
+        conn.query('CREATE TABLE IF NOT EXISTS av_db.filehash (sha256sum varchar(256) NOT NULL PRIMARY KEY, filename TEXT NULL, clam_detection BOOL NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;')
+        conn.end().then(console.log("Check done."))
+    });
 });
 
 // Message Area
 
-dc_client.on('message', dc_msg => {
+dc_client.on('message', async dc_msg => {
 
     // Message Logs
     console.log(`[${new Date(Date.now()).toLocaleString()}] ${dc_msg.guild.id} - ${dc_msg.member.user.tag}: ${dc_msg}`);
@@ -33,10 +39,11 @@ dc_client.on('message', dc_msg => {
     // Message Handles
 
     if (dc_msg.attachments.first()) {
-        db_pool.getConnection().then(conn => {
-        dc_msg.react('645681399512432660');
-        var dl_obj = { dc_msg: dc_msg, db_pool: db_pool };
-        module_index.fileload_loader.download(dl_obj)
+        db_pool.getConnection().then(async conn => {
+            let bot_reaction = await dc_msg.react('645681399512432660');
+            var dl_obj = { dc_msg: dc_msg, db_pool: db_pool, dc_client: dc_client, bot_reaction: bot_reaction };
+            module_index.fileload_loader.download(dl_obj)
+            conn.end()
         });
     };
 

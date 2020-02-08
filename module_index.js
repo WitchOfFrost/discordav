@@ -1,0 +1,1 @@
+exports.fileload_loader = require('./modules/fileload.js');

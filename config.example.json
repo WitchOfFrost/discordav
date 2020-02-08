@@ -3,9 +3,9 @@
         "dc_client_token": ""
     },
     "database_config": {
-        "user": "",
+        "user": "av",
         "password": "",
-        "host": "",
-        "database": ""
+        "host": "localhost",
+        "database": "av_db"
     }
 }
